@@ -32,9 +32,8 @@ def file_prompt(message: str) -> Path:
 def destination_prompt(message: str) -> Path:
     while(True):
         path = fix_user_paths(Path(prompt(message)))
-        if path.exists():
-            if not path.is_dir():
-                print("    ERROR: The path \"{}\" is not a folder.\n".format(path))
+        if path.exists() and not path.is_dir():
+            print("    ERROR: The path \"{}\" is not a folder.\n".format(path))
         else:
             break
     return path
@@ -70,7 +69,7 @@ def configure() -> (str, str):
         configuration[0] = file_prompt("Path to backup locations file: ")
     print("")
     if BACKUP and yes_or_no_prompt("Use preset backup folder \"{}\"?".format(BACKUP)):
-            configuration[1] = Path(BACKUP)
+        configuration[1] = Path(BACKUP)
     else:
         configuration[1] = destination_prompt("Path to backup destination: ")
 
@@ -82,7 +81,7 @@ def load_locations(locations_file: Path) -> [Path]:
     with locations_file.open() as file:
         for line in file:
             line = line.strip()
-            path = Path(line)
+            path = fix_user_paths(Path(line))
             if(path.exists()):
                 locations.append(path)
                 print("    Added \"{}\"".format(path))
@@ -102,7 +101,7 @@ def backup(locations: [Path], destination: Path):
     
     for location in locations:
         print("    Backing up \"{}\"".format(location))
-        shutil.copytree(str(location), str(destination))
+        shutil.copytree(str(location), str(destination.joinpath(location.name)))
 
     destination.touch()
     print("\nBackup complete!")
@@ -115,7 +114,10 @@ def main():
     print("\nStarting backup process...")
 
     locations = load_locations(locations_file)
-    backup(locations, destination_dir)
+    if locations:
+        backup(locations, destination_dir)
+    else:
+        print("\nAborted backup.")
 
 if __name__ == '__main__':
     main()
